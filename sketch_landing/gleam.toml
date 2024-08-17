@@ -1,4 +1,5 @@
 name = "sketch_landing"
+target = "javascript"
 version = "1.0.0"
 
 description = ""
@@ -9,8 +10,9 @@ repository = {type = "github", user = "ghivert", repo = "sketch"}
 [dependencies]
 gleam_stdlib = ">= 0.34.0 and < 2.0.0"
 redraw = ">= 1.0.0 and < 2.0.0"
-sketch_css = ">= 1.1.0 and < 2.0.0"
+redraw_dom = ">= 1.0.0 and < 2.0.0"
 sketch = ">= 3.0.2 and < 4.0.0"
+sketch_css = {path = "../sketch_css"}
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
