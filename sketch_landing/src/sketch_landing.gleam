@@ -3,6 +3,7 @@ import gleam/option.{None}
 import gleam/string
 import redraw
 import redraw/attribute as a
+import redraw/handler
 import redraw/html as h
 import redraw_dom/client
 import sketch
@@ -23,11 +24,16 @@ pub fn main() {
 fn app() {
   let code_highlight = code_highlight()
   use <- redraw.component__("App")
+  let #(count, set_count) = redraw.use_state_(0)
   redraw.fragment([
     h.h1([], [h.text("Sketch")]),
     h.div([], [h.text("CSS-in-Gleam, made simple")]),
-    h.div([], []),
-    sh.div(section(), [], [
+    h.div([], [
+      h.button([handler.on_click(fn(_) { set_count(fn(c) { c + 1 }) })], [
+        h.text("click me"),
+      ]),
+    ]),
+    sh.div(section(count), [], [
       h.h2([], [h.text("Sketch CSS")]),
       h.div([], [code_highlight(#(example_css.css))]),
     ]),
@@ -37,14 +43,17 @@ fn app() {
 fn code_highlight() {
   use #(code) <- redraw.component_("CodeHighlight")
   let res = css.compute_modules([css.Module("example_css.gleam", code, None)])
-  io.debug(res)
+  // io.debug(res)
   let code = highlight(string.trim(code))
   h.code([a.dangerously_set_inner_html(a.inner_html(code))], [])
 }
 
-fn section() {
+fn section(count: Int) {
   sketch.class([
-    sketch.background("red"),
+    sketch.background(case count % 2 == 0 {
+      True -> "red"
+      False -> "red"
+    }),
     sketch.color("white"),
     sketch.border_radius(px(8)),
   ])
