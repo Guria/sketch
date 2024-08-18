@@ -13,6 +13,7 @@ redraw = {path = "../../redraw/redraw"}
 redraw_dom = ">= 1.0.0 and < 2.0.0"
 sketch = ">= 3.0.2 and < 4.0.0"
 sketch_css = {path = "../sketch_css"}
+sketch_redraw = {path = "../sketch_redraw"}
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"

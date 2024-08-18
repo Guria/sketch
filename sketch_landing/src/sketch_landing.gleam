@@ -7,7 +7,8 @@ import redraw/html as h
 import redraw_dom/client
 import sketch
 import sketch/css
-import sketch/redraw as sh
+import sketch/redraw as sr
+import sketch/redraw/html as sh
 import sketch/size.{px}
 import sketch_landing/example_css
 
@@ -17,7 +18,7 @@ fn highlight(code: String) -> String
 pub fn main() {
   let app = app()
   let root = client.create_root("root")
-  client.render(root, redraw.strict_mode([sh.provider([app()])]))
+  client.render(root, redraw.strict_mode([sr.provider([app()])]))
 }
 
 fn app() {
@@ -39,7 +40,7 @@ fn app() {
 
 fn code_highlight() {
   use #(code) <- redraw.component_("CodeHighlight")
-  let res = css.compute_modules([css.Module("example_css.gleam", code, None)])
+  let _res = css.compute_modules([css.Module("example_css.gleam", code, None)])
   let code = highlight(string.trim(code))
   h.code([a.dangerously_set_inner_html(a.inner_html(code))], [])
 }
