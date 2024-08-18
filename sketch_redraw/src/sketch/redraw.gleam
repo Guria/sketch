@@ -1,15 +1,27 @@
-import redraw.{type Component}
+import redraw.{type Component} as r
 import redraw/attribute.{type Attribute} as a
-import redraw/html
 import redraw/internals/attribute
 import sketch.{type Class}
 import sketch/redraw/internals/mutable as mut
 import sketch/redraw/internals/object
 
+type Provided {
+  Provided(cache: mut.Mutable(sketch.Cache), render: fn() -> Nil)
+}
+
 /// Extract the props generated from `styled` function.
 /// Extract `as` and `styles`, and the new props without them.
 @external(javascript, "../redraw.ffi.mjs", "extract")
 fn extract(props: a) -> #(String, Class, a)
+
+@external(javascript, "../redraw.ffi.mjs", "useInsertionEffect")
+fn use_insertion_effect(setup: fn() -> Nil, deps: a) -> Nil
+
+@external(javascript, "../redraw.ffi.mjs", "createStyleTag")
+fn create_style_tag() -> a
+
+@external(javascript, "../redraw.ffi.mjs", "dumpStyles")
+fn dump_styles(style: a, content: String) -> Nil
 
 /// Creates the styled function from `do_styled` if it does not exists.
 /// Otherwise, returns the existing `do_styled` function specialized for the tag.
@@ -46,31 +58,43 @@ const error_msg = "Sketch Redraw Provider not set. Please, set your provider"
 pub fn provider(children) {
   let assert Ok(cache) = sketch.cache(strategy: sketch.Ephemeral)
   let cache = mut.wrap(cache)
-  let assert Ok(context) = redraw.context(context_name, cache)
-  redraw.provider(context, cache, children)
+  let provided = Provided(cache:, render: fn() { Nil })
+  let assert Ok(context) = r.context(context_name, provided)
+  let style = create_style_tag()
+  let render = fn() { dump_styles(style, sketch.render(mut.get(cache))) }
+  let provided = Provided(cache:, render:)
+  r.provider(context, provided, children)
 }
 
 fn get_context() {
-  case redraw.get_context(context_name) {
+  case r.get_context(context_name) {
     Ok(context) -> context
     Error(_) -> panic as error_msg
   }
 }
 
-fn do_styled(props) {
-  let context = get_context()
-  let cache: mut.Mutable(sketch.Cache) = redraw.use_context(context)
-  let #(tag, styles, props) = extract(props)
-  let deps = #(styles.string_representation)
-  let #(cache_, class_name) =
-    redraw.use_memo(fn() { sketch.class_name(styles, mut.get(cache)) }, deps)
-  let style = sketch.render(mut.get(mut.set(cache, cache_)))
-  redraw.fragment([
-    html.style([], style),
-    redraw.jsx(tag, object.add(props, "className", class_name), Nil),
-  ])
+fn generate_class_name(cache, styles) {
+  fn() {
+    let #(cache_, class_name) = sketch.class_name(styles, mut.get(cache))
+    mut.set(cache, cache_)
+    class_name
+  }
 }
 
+fn do_styled(props) {
+  let context = get_context()
+  let Provided(cache:, render:) = r.use_context(context)
+  let #(tag, styles, props) = extract(props)
+  let str = styles.string_representation
+  let gen_cl = r.use_callback(generate_class_name(cache, styles), #(cache, str))
+  let class_name = r.use_memo(gen_cl, #(str))
+  use_insertion_effect(fn() { render() }, #(class_name))
+  r.jsx(tag, object.add(props, "className", class_name), Nil)
+}
+
+/// Style a native DOM node. Can probably be used for custom elements, but props
+/// will be different, so I don't know yet how to do it properly.
+@internal
 pub fn styled(
   tag: String,
   styles: Class,
@@ -81,5 +105,5 @@ pub fn styled(
   let styles = a.attribute("styles", styles)
   let fun = styled_fn(tag, do_styled)
   attribute.to_props([as_, styles, ..props])
-  |> redraw.jsx(fun, _, children)
+  |> r.jsx(fun, _, children)
 }

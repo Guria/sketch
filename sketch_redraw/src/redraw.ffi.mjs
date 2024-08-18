@@ -1,3 +1,5 @@
+import * as React from 'react'
+
 const styledFns = {}
 
 export function styledFn(tag, defaultValue) {
@@ -15,4 +17,22 @@ export function extract(props) {
 
 export function assign(props, fieldName, value) {
   return { ...props, [fieldName]: value }
+}
+
+export function dumpStyles(style, content) {
+  if (style.innerHTML === content) return null
+  style.innerHTML = content
+  return null
+}
+
+export function useInsertionEffect(setup) {
+  return React.useInsertionEffect(() => {
+    setup()
+  })
+}
+
+export function createStyleTag() {
+  const style = document.createElement('style')
+  document.head.appendChild(style)
+  return style
 }
