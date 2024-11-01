@@ -1,4 +1,3 @@
-import gleam/int
 import gleam/list
 import gleam/option
 import gleam/pair
@@ -10,7 +9,6 @@ import sketch.{type Cache}
 pub opaque type Element(msg) {
   Nothing
   Text(content: String)
-  Fragment(key: String, children: List(Element(msg)))
   Map(subtree: fn() -> Element(msg))
   Element(
     key: String,
@@ -68,10 +66,6 @@ pub fn namespaced_(
   Element("", namespace, tag, option.None, attributes, children)
 }
 
-pub fn fragment(children: List(Element(msg))) {
-  Fragment("", children)
-}
-
 pub fn keyed(
   element: fn(List(Element(msg))) -> Element(msg),
   children: List(#(String, Element(msg))),
@@ -87,21 +81,6 @@ fn do_keyed(element: Element(msg), key: String) {
     Nothing -> Nothing
     Text(content) -> Text(content)
     Map(subtree) -> Map(fn() { do_keyed(subtree(), key) })
-    Fragment(_, children) ->
-      children
-      |> list.index_map(fn(element, idx) {
-        case element {
-          Element(el_key, _, _, _, _, _) -> {
-            let new_key = case el_key {
-              "" -> key <> "-" <> int.to_string(idx)
-              _ -> key <> "-" <> el_key
-            }
-            do_keyed(element, new_key)
-          }
-          _ -> do_keyed(element, key)
-        }
-      })
-      |> Fragment(key, _)
     Element(_, namespace, tag, attributes, children, styles) ->
       Element(key, namespace, tag, attributes, children, styles)
   }
@@ -112,7 +91,7 @@ pub fn map(element: Element(a), mapper: fn(a) -> b) {
     Nothing -> Nothing
     Text(content) -> Text(content)
     Map(subtree) -> Map(fn() { map(subtree(), mapper) })
-    Fragment(key, children) -> Fragment(key, list.map(children, map(_, mapper)))
+    // Fragment(key, children) -> Fragment(key, list.map(children, map(_, mapper)))
     Element(key, namespace, tag, class, attributes, children) -> {
       let attributes = list.map(attributes, attribute.map(_, mapper))
       let children = list.map(children, map(_, mapper))
@@ -125,7 +104,6 @@ pub fn styled(element: el.Element(msg)) {
   case element {
     vdom.Map(subtree) -> Map(fn() { styled(subtree()) })
     vdom.Text(content) -> Text(content)
-    vdom.Fragment(elements, key) -> Fragment(key, list.map(elements, styled))
     vdom.Element(key, namespace, tag, attrs, children, _, _) -> {
       let class = option.None
       Element(key, namespace, tag, class, attrs, list.map(children, styled))
@@ -138,9 +116,6 @@ pub fn unstyled(cache: Cache, element: Element(msg)) {
     Nothing -> #(cache, el.none())
     Text(content) -> #(cache, el.text(content))
     Map(subtree) -> unstyled(cache, subtree())
-    Fragment(key, children) ->
-      unstyled_children(cache, children)
-      |> pair.map_second(fn(node) { vdom.Fragment(node, key) })
     Element(key, namespace, tag, class, attributes, children) -> {
       let class = option.map(class, sketch.class_name(_, cache))
       let class_name = option.map(class, pair.second)
